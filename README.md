@@ -1,1 +1,1 @@
-# spbau_cpp
+# SPbAU C++
