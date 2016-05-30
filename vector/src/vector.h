@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdexcept>
+#include <string.h>
 namespace my
 {
     template <typename T>
@@ -30,7 +31,7 @@ namespace my
                 try
                 {
                     for( size_t i = 0; i < src_size; ++i )
-                        new(dst + i) T( std::move_if_noexcept( src[i] ) );
+                        new( dst + i ) T( std::move_if_noexcept( src[i] ) );
                 }
                 catch( ... )
                 {
@@ -62,8 +63,10 @@ namespace my
                 , reserved_size( capacity_ )
                 , used( 0 )
             {
+                // TODO: strog exception safety brokes here :)
                 for( size_t i = 0; i < capacity_; ++i )
                     emplace_back( T() );
+                //
             }
 
             vector()
@@ -74,7 +77,7 @@ namespace my
             }
 
             vector( const vector<T>& rhs )
-                : array( safe_copy( rhs.array, rhs.used, rhs.used) )
+                : array( safe_copy( rhs.array, rhs.used, rhs.used ) )
                 , reserved_size( rhs.reserved_size )
                 , used( rhs.used )
             {}
@@ -151,7 +154,7 @@ namespace my
                 if( new_capacity <= reserved_size )
                     return;
 
-               auto new_buffer = safe_move( array, used, new_capacity);
+                auto new_buffer = safe_move( array, used, new_capacity );
 
                 release_buf( array, used );
                 array = new_buffer;
@@ -167,32 +170,24 @@ namespace my
             {
                 if( used == reserved_size )
                     reserve( reserved_size * 2 );
-                new( array + used++ ) T( new_element );
+                new( array + used ) T( new_element );
+                used++;
             }
 
             void push_back( T&& new_element )
             {
                 if( used == reserved_size )
                     reserve( 2 * reserved_size );
-                new( array + used++ ) T( std::move( new_element ) );
+                new( array + used ) T( std::move( new_element ) );
+                used++;
             }
-
-//            void push_back( T new_element )
-//            {
-//                if( used == reserved_size )
-//                    reserve( 2 * reserved_size);
-//                new( array + used++ ) T( std::move( new_element ) );
-//            }
 
             template <typename... Args>
             void emplace_back( Args&& ... args )
             {
-                if( used == reserved_size )
-                    reserve( 2 * reserved_size );
-                new( array + used++ ) T( std::forward<Args>( args )... );
+                push_back( T( std::forward<Args>( args )... ) );
             }
 
-            // for personal use
             typedef T* iterator;
             iterator begin()
             {
